@@ -2,45 +2,120 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+async function clearDatabase() {
+  await prisma.$transaction(async (prisma) => {
+    // Delete all rows from dependent tables first
+    await prisma.organizationMembership.deleteMany();
+    await prisma.stack.deleteMany();
+
+    // Delete main table rows
+    await prisma.organization.deleteMany();
+    await prisma.user.deleteMany();
+  });
+}
+
+function generateUsers(config: {
+  usersQuantity: number;
+  generateAdmin: boolean;
+  prefix: string;
+}) {
+  const { usersQuantity, generateAdmin, prefix } = config;
+
+  const users = [];
+
+  for (let i = 0; i < usersQuantity; i++) {
+    users.push({
+      email: `user.${prefix}+${i}@user.com`,
+      firstName: `User${prefix} ${i}`,
+      lastName: `UserLastName ${i}`,
+      password: 'qwerty',
+      type: 'USER',
+      telephone: '12345678',
+    });
+  }
+
+  if (generateAdmin) {
+    users.push({
+      email: `admin@admin.com`,
+      firstName: `AdminFirstName`,
+      lastName: `AdminLastName`,
+      password: 'qwerty',
+      type: 'ADMIN',
+      telephone: '12345678',
+    });
+  }
+
+  return users;
+}
+
 async function main() {
-  const [john, jane, organization] = await prisma.$transaction(
-    async (prisma) => {
-      const john = await prisma.user.create({
-        data: {
-          email: 'john.doe@mail.com',
-          firstName: 'John',
-          lastName: 'Doe',
-          password: 'qwerty',
-          role: 'USER',
-          telephone: '123456789',
-        },
-      });
+  await clearDatabase();
 
-      const jane = await prisma.user.create({
-        data: {
-          email: 'jane.doe@mail.com',
-          firstName: 'Jane',
-          lastName: 'Doe',
-          password: 'qwerty',
-          role: 'USER',
-          telephone: '123456789',
-        },
-      });
+  console.log('Executing seeder...');
 
-      const organization = await prisma.organization.create({
-        data: {
-          name: 'Test Org',
-          memberships: {
-            create: [{ userId: john.id }, { userId: jane.id }],
-          },
-        },
-      });
+  await prisma.$transaction(async (prisma) => {
+    // Generate users for alpha organization
+    const alphaUsers = generateUsers({
+      usersQuantity: 20,
+      generateAdmin: true,
+      prefix: 'alpha',
+    });
 
-      return [john, jane, organization];
+    const createdAlphaUsers = await prisma.user.createManyAndReturn({
+      data: alphaUsers,
+    });
+
+    await prisma.organization.create({
+      data: {
+        name: 'Alpha Organization',
+        memberships: {
+          create: createdAlphaUsers.map((u) => ({ userId: u.id })),
+        },
+      },
+    });
+
+    // Generate users for beta organization
+    const betaUsers = generateUsers({
+      usersQuantity: 20,
+      generateAdmin: false,
+      prefix: 'beta',
+    });
+
+    const createdBetaUsers = await prisma.user.createManyAndReturn({
+      data: betaUsers,
+    });
+
+    await prisma.organization.create({
+      data: {
+        name: 'Beta Organization',
+        memberships: {
+          create: createdBetaUsers.map((u) => ({ userId: u.id })),
+        },
+      },
+    });
+  });
+
+  // Generate users for delta organization
+  const deltaUsers = generateUsers({
+    usersQuantity: 20,
+    generateAdmin: false,
+    prefix: 'delta',
+  });
+
+  const createdDeltaUsers = await prisma.user.createManyAndReturn({
+    data: deltaUsers,
+  });
+
+  await prisma.organization.create({
+    data: {
+      name: 'Delta Organization',
+      memberships: {
+        create: createdDeltaUsers.map((u) => ({ userId: u.id })),
+      },
     },
-  );
+  });
 
-  console.log([john, jane, organization]);
+  console.log('Finished seeder execution...');
 }
 
 main()

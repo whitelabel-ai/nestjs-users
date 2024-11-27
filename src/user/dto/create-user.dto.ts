@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { User, UserType } from '@prisma/client';
 
+// TODO: update DTO according to the register one. And check why is not working the class validator
 export class CreateUserDto {
   @ApiProperty({ required: true })
   email: string;
@@ -8,8 +9,8 @@ export class CreateUserDto {
   @ApiProperty({ required: false })
   telephone?: string;
 
-  @ApiProperty({ required: true })
-  firstName: string;
+  @ApiProperty({ required: false })
+  firstName?: string;
 
   @ApiProperty({ required: false })
   lastName?: string;
@@ -18,5 +19,5 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty({ required: false, default: 'USER' })
-  role?: Role = 'USER';
+  type?: UserType = 'USER';
 }
