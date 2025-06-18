@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,83 +13,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Consuption_Types {
-  id          Int           @id @default(autoincrement())
-  description String        @unique @db.VarChar(255)
-  is_active   Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime
-  Consuptions Consuptions[]
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  telephone String?  @db.VarChar(20)
+  firstName String?  @db.VarChar(100)
+  lastName  String?  @db.VarChar(100)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  password  String   @db.VarChar(255)
+
+  memberships OrganizationMembership[]
+  type        UserType                 @default(USER)
+  stacks      Stack[]                  @relation("UserStacks")
 
   @@index([id])
-}
-
-model Consuptions {
-  id                       String                 @id
-  createdAt                DateTime               @default(now())
-  consuptionTypeId         Int
-  organizationMembershipId String
-  quantity                 Decimal                @db.Decimal(10, 2)
-  Consuption_Types         Consuption_Types       @relation(fields: [consuptionTypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "consuptions_consuption_types_fk")
-  OrganizationMembership   OrganizationMembership @relation(fields: [organizationMembershipId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "consuptions_organizationmembership_fk")
-
-  @@index([id])
+  @@index([email])
 }
 
 model Organization {
-  id                     String                   @id
-  name                   String
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime?
-  OrganizationMembership OrganizationMembership[]
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  memberships OrganizationMembership[]
 
   @@index([id])
   @@index([name])
 }
 
 model OrganizationMembership {
-  id             String                 @id
+  id             String                 @id @default(uuid())
   organizationId String
   userId         String
   role           OrganizationMemberRole @default(MEMBER)
   createdAt      DateTime               @default(now())
-  updatedAt      DateTime?
-  Consuptions    Consuptions[]
-  Organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  User           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime?              @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
-  @@index([organizationId])
   @@index([userId])
+  @@index([organizationId])
 }
 
 model Stack {
-  id          String   @id
+  id          String   @id @default(uuid())
   name        String   @db.VarChar(255)
-  description String?
+  description String?  @db.Text
   userId      String
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
-  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation("UserStacks", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-}
-
-model User {
-  id                     String                   @id
-  email                  String                   @unique @db.VarChar(255)
-  telephone              String?                  @db.VarChar(20)
-  firstName              String?                  @db.VarChar(100)
-  lastName               String?                  @db.VarChar(100)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime
-  password               String                   @db.VarChar(255)
-  type                   UserType                 @default(USER)
-  OrganizationMembership OrganizationMembership[]
-  Stack                  Stack[]
-
-  @@index([email])
-  @@index([id])
 }
 
 enum OrganizationMemberRole {
