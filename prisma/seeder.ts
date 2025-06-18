@@ -74,6 +74,7 @@ async function main() {
       },
     });
 
+
     // Generate users for beta organization
     const betaUsers = generateUsers({
       usersQuantity: 20,
